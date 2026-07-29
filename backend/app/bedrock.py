@@ -419,6 +419,28 @@ def is_tooluse_supported(model: type_model_name) -> bool:
     ]
 
 
+def is_tooluse_streaming_supported(model: type_model_name) -> bool:
+    """Check if the model supports tool use while streaming.
+
+    Some models accept `toolConfig` on `Converse` but reject it on `ConverseStream`
+    with `ValidationException: This model doesn't support tool use in streaming mode.`
+    For those, the caller must fall back to the non-streaming Converse API whenever
+    tools are attached.
+    Ref: https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference-supported-models-features.html
+    """
+    if not is_tooluse_supported(model):
+        return False
+
+    return model not in [
+        "mistral-7b-instruct",
+        "mixtral-8x7b-instruct",
+        "mistral-large",
+        "llama3-3-70b-instruct",
+        "llama3-2-11b-instruct",
+        "llama3-2-90b-instruct",
+    ]
+
+
 def is_specify_both_temperature_and_top_p_supported(model: type_model_name) -> bool:
     return model not in [
         "claude-v4.1-opus",

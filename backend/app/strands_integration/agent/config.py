@@ -8,6 +8,7 @@ from app.bedrock import (
     get_model_id,
     generation_params_to_converse_configuration,
     is_prompt_caching_supported,
+    is_tooluse_streaming_supported,
 )
 from app.repositories.models.conversation import type_model_name
 from app.repositories.models.custom_bot import GenerationParamsModel
@@ -34,6 +35,18 @@ def get_bedrock_model_config(
     config: BedrockModel.BedrockConfig = {
         "model_id": model_id,
     }
+
+    # Some models support tool use only through the non-streaming Converse API.
+    # Sending `toolConfig` to ConverseStream fails with:
+    # "This model doesn't support tool use in streaming mode."
+    # Strands then converts the single response into stream events, so the rest of
+    # the pipeline (callback handler, websocket) keeps working without changes.
+    if has_tools and not is_tooluse_streaming_supported(model_name):
+        config["streaming"] = False
+        logger.info(
+            f"Streaming disabled for model {model_name}: "
+            "it does not support tool use in streaming mode."
+        )
 
     # Prepare model-specific parameters
     converse_config = generation_params_to_converse_configuration(
