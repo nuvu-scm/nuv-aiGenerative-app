@@ -15,7 +15,14 @@ import unittest
 from pprint import pprint
 from unittest.mock import patch
 
-from app.bedrock import call_converse_api, compose_args_for_converse_api, get_model_id
+from app.bedrock import (
+    call_converse_api,
+    compose_args_for_converse_api,
+    get_model_id,
+    is_tooluse_streaming_supported,
+    is_tooluse_supported,
+)
+from app.strands_integration.agent.config import get_bedrock_model_config
 from app.repositories.models.conversation import SimpleMessageModel, TextContentModel
 from app.repositories.models.custom_bot_guardrails import BedrockGuardrailsModel
 from app.routes.schemas.conversation import type_model_name
@@ -283,6 +290,55 @@ class TestCallConverseApiWithGuardrails(unittest.TestCase):
 
         response = call_converse_api(arg)
         pprint(response)
+
+
+class TestIsTooluseStreamingSupported(unittest.TestCase):
+    def test_models_supporting_tooluse_while_streaming(self):
+        models: list[type_model_name] = [
+            "claude-v4.5-sonnet",
+            "claude-v4.1-opus",
+            "claude-v4.5-haiku",
+            "amazon-nova-pro",
+            "gpt-oss-120b",
+        ]
+        for model in models:
+            with self.subTest(model=model):
+                self.assertTrue(is_tooluse_streaming_supported(model))
+
+    def test_models_requiring_non_streaming_for_tooluse(self):
+        # These accept toolConfig on Converse but reject it on ConverseStream.
+        models: list[type_model_name] = [
+            "mistral-7b-instruct",
+            "mistral-large",
+            "llama3-3-70b-instruct",
+        ]
+        for model in models:
+            with self.subTest(model=model):
+                self.assertTrue(is_tooluse_supported(model))
+                self.assertFalse(is_tooluse_streaming_supported(model))
+
+    def test_models_without_tooluse_are_also_unsupported_for_streaming(self):
+        models: list[type_model_name] = ["deepseek-r1", "llama3-2-1b-instruct"]
+        for model in models:
+            with self.subTest(model=model):
+                self.assertFalse(is_tooluse_streaming_supported(model))
+
+
+class TestBedrockModelConfigStreaming(unittest.TestCase):
+    def test_streaming_disabled_when_model_cannot_stream_tooluse(self):
+        config = get_bedrock_model_config(model_name="mistral-large", has_tools=True)
+        self.assertFalse(config["streaming"])
+
+    def test_streaming_left_untouched_without_tools(self):
+        # Without tools these models stream normally, so the flag must not be set.
+        config = get_bedrock_model_config(model_name="mistral-large", has_tools=False)
+        self.assertNotIn("streaming", config)
+
+    def test_streaming_left_untouched_for_capable_model(self):
+        config = get_bedrock_model_config(
+            model_name="claude-v4.5-sonnet", has_tools=True
+        )
+        self.assertNotIn("streaming", config)
 
 
 if __name__ == "__main__":

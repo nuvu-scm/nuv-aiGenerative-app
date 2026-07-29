@@ -1,0 +1,27 @@
+{
+  "pipelineName": "bnddevs",
+  "params": {
+    "identityProviders": [
+      {
+        "service": "oidc",
+        "serviceName": "iam-oidc",
+        "secretName": "bndDevsNadia4Secret"
+      }
+    ],
+    "userPoolDomainPrefix": "bnd-devs-nadia",
+    "bedrockRegion": "us-east-1",
+    "allowedSignUpEmailDomains": ["nuvu.cc", "blend360.com"],
+    "autoJoinUserGroups": [],
+    "alternateDomainName": "nadia.devs.ia.blend360.com",
+    "hostedZoneId": "Z04006331RMWHUIG10GV",
+    "kinesisObservabilityStreamArn": "arn:aws:kinesis:us-east-1:573578169450:stream/bnd-devs-observability-ingestion-stream",
+    "kinesisObservabilityKeyArn": "arn:aws:kms:us-east-1:573578169450:key/284cb7da-fafe-4436-9226-48ffcbeab252"
+  },
+  "colors": {
+    "primary_color": "#1468C7",
+    "primary_hover": "#1468c74d",
+    "primary_dark": "#89B3E3",
+    "font_color": "#152147"
+  }
+}
+ 

@@ -90,7 +90,7 @@ def converse_with_strands(
     # Observability: create context (no-op if disabled)
     obs_context = create_observability_context(
         workflow_id=f"{chat_input.conversation_id}",
-        title=f"{bot.title}",
+        title=bot.title if bot else "Chat",
         user_msg_id=chat_input.message.message_id,
         bot_id=bot.id if bot else None,
         conversation_id=chat_input.conversation_id,
