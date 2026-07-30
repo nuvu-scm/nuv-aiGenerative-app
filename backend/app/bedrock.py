@@ -48,6 +48,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
+# Mistral rejects top_k above this value: "Input should be less than or equal to 200"
+MISTRAL_MAX_TOP_K = 200
 ENABLE_BEDROCK_GLOBAL_INFERENCE = (
     os.environ.get("ENABLE_BEDROCK_GLOBAL_INFERENCE", "false") == "true"
 )
@@ -400,8 +402,13 @@ def is_llama_model(model: type_model_name) -> bool:
 
 
 def is_mistral(model: type_model_name) -> bool:
-    """Check if the model is a Mistral model"""
-    return "mistral" in model
+    """Check if the model is a Mistral model
+
+    NOTE: `mixtral-8x7b-instruct` does not contain the substring "mistral",
+    so it must be matched explicitly or it falls back to the generic
+    (Anthropic-shaped) parameters.
+    """
+    return "mistral" in model or "mixtral" in model
 
 
 def is_gpt_oss_model(model: type_model_name) -> bool:
@@ -491,6 +498,20 @@ def is_multiple_system_prompt_content_supported(model: type_model_name):
         or is_mistral(model)
         or is_gpt_oss_model(model)
     )
+
+
+def is_system_prompt_supported(model: type_model_name) -> bool:
+    """Check if the model accepts the `system` field of the Converse API.
+
+    Some models reject any system message with:
+    `ValidationException: This model doesn't support system messages.`
+    For those, the caller must fold the instructions into the first user message.
+    Ref: https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference-supported-models-features.html
+    """
+    return model not in [
+        "mistral-7b-instruct",
+        "mixtral-8x7b-instruct",
+    ]
 
 
 def is_unsigned_reasoning_content_supported(model: type_model_name):
@@ -600,11 +621,22 @@ def _prepare_mistral_model_params(
         "inferenceConfig": inference_config,
     }
 
-    # Add top_k if specified in generation params
+    # Add top_k if specified in generation params.
+    # NOTE: Mistral expects the native snake_case name `top_k` and only accepts
+    # values in 1..200. Sending `topK` (the Nova convention) or a value out of
+    # range fails with "Validation Error: ... top_k" on the Converse API.
     if generation_params and generation_params.top_k is not None:
-        converse_config["additionalModelRequestFields"] = {
-            "topK": generation_params.top_k
-        }
+        top_k = generation_params.top_k
+        if top_k > MISTRAL_MAX_TOP_K:
+            logger.warning(
+                f"In Mistral, top_k must be at most {MISTRAL_MAX_TOP_K}. "
+                f"Capping the requested value ({top_k}) to avoid a validation error."
+            )
+            top_k = MISTRAL_MAX_TOP_K
+
+        # top_k below 1 is rejected as well, and means "unset" in this app.
+        if top_k >= 1:
+            converse_config["additionalModelRequestFields"] = {"top_k": top_k}
 
     return converse_config
 
@@ -1008,7 +1040,21 @@ def compose_args_for_converse_api(
 
     system_prompts: list[SystemContentBlockTypeDef]
 
-    if is_multiple_system_prompt_content_supported(model):
+    if not is_system_prompt_supported(model):
+        # The model rejects any system message, so the instructions are folded into
+        # the first user message instead.
+        system_prompts = []
+        instruction_text = "\n\n".join(x for x in instructions if x).strip()
+        first_user_message = next(
+            (m for m in arg_messages if m["role"] == "user"), None
+        )
+        if instruction_text and first_user_message is not None:
+            first_user_message["content"] = [
+                {"text": instruction_text},
+                *(first_user_message["content"] or []),
+            ]
+
+    elif is_multiple_system_prompt_content_supported(model):
         system_prompts = [
             {
                 "text": instruction,

@@ -13,9 +13,11 @@ class _FakeAgent:
     def __init__(self):
         self.callback_handler = None
         self.messages = []
+        self.received_messages = None
         self.event_loop_metrics = SimpleNamespace(accumulated_usage={})
 
     def __call__(self, messages):
+        self.received_messages = messages
         self.messages = [
             {
                 "role": "assistant",
@@ -23,7 +25,7 @@ class _FakeAgent:
                     {
                         "text": (
                             "<thinking>Buscando informacion.</thinking>\n\n"
-                            "<tool_results>{\"secret\": \"internal\"}</tool_results>\n\n"
+                            '<tool_results>{"secret": "internal"}</tool_results>\n\n'
                             "Hola, soy Nadia."
                         )
                     }
@@ -107,11 +109,77 @@ class TestConverseWithStrands(unittest.TestCase):
         )
         self.assertIsNone(mock_create_observability_context.call_args.kwargs["bot_id"])
 
+    @patch("app.strands_integration.chat_strands.complete_observability_context")
+    @patch("app.strands_integration.chat_strands.create_strands_agent")
+    @patch("app.strands_integration.chat_strands.create_observability_context")
+    def test_model_without_system_prompt_support_gets_instructions_in_user_message(
+        self,
+        mock_create_observability_context,
+        mock_create_strands_agent,
+        _mock_complete_observability_context,
+    ):
+        mock_create_observability_context.return_value = ObservabilityContext(
+            logger=None,
+            agent_node=None,
+        )
+        fake_agent = _FakeAgent()
+        mock_create_strands_agent.return_value = fake_agent
+
+        chat_input = ChatInput(
+            conversation_id="conversation-1",
+            message=MessageInput(
+                role="user",
+                content=[
+                    TextContent(
+                        content_type="text",
+                        body="hola",
+                    )
+                ],
+                model="mistral-7b-instruct",
+                parent_message_id=None,
+                message_id=None,
+            ),
+            bot_id=None,
+            continue_generate=False,
+            enable_reasoning=False,
+        )
+        messages = [
+            SimpleMessageModel(
+                role="user",
+                content=[
+                    TextContentModel(
+                        content_type="text",
+                        body="hola",
+                    )
+                ],
+            )
+        ]
+
+        converse_with_strands(
+            bot=None,
+            chat_input=chat_input,
+            user_msg_id="user-message-1",
+            instructions=["Eres Nadia.", "Responde en espanol."],
+            generation_params=None,
+            guardrail=None,
+            display_citation=False,
+            messages=messages,
+            search_results=[],
+        )
+
+        first_user_message = fake_agent.received_messages[0]
+        self.assertEqual(first_user_message["role"], "user")
+        self.assertEqual(
+            first_user_message["content"][0],
+            {"text": "Eres Nadia.\n\nResponde en espanol."},
+        )
+        self.assertEqual(first_user_message["content"][1]["text"], "hola")
+
     def test_agent_thought_keeps_inner_text_without_control_tags(self):
         self.assertEqual(
             sanitize_agent_text(
                 "<thinking>I need to retrieve knowledge.</thinking>\n"
-                "<tool_results>{\"internal\": true}</tool_results>"
+                '<tool_results>{"internal": true}</tool_results>'
             ),
             "I need to retrieve knowledge.",
         )

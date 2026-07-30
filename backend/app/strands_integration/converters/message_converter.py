@@ -131,6 +131,37 @@ def simple_message_models_to_strands_messages(
     return messages
 
 
+def prepend_instructions_to_first_user_message(
+    messages: Messages,
+    instructions: list[str],
+) -> Messages:
+    """Fold the system instructions into the first user message.
+
+    Used for models that reject the `system` field of the Converse API
+    (see `is_system_prompt_supported`). The instructions are prepended as their own
+    text block so the model still receives them, without a system message.
+    """
+    instruction_text = "\n\n".join(x for x in instructions if x).strip()
+    if not instruction_text:
+        return messages
+
+    for message in messages:
+        if message["role"] != "user":
+            continue
+
+        message["content"] = [
+            {"text": instruction_text},
+            *(message["content"]),
+        ]
+        return messages
+
+    # No user message to attach to (should not happen in a chat turn)
+    logger.warning(
+        "Instructions could not be applied: no user message in the conversation."
+    )
+    return messages
+
+
 def strands_message_to_simple_message_model(message: Message) -> SimpleMessageModel:
     return SimpleMessageModel(
         role=message["role"],

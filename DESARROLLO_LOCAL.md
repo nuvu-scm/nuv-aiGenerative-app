@@ -2,7 +2,7 @@
 
 Guía práctica para levantar el proyecto en tu máquina y desarrollar contra el stack ya desplegado en AWS.
 
-> Complementa a [LOCAL_README.md](LOCAL_README.md), que tiene el detalle de capturas de consola AWS, Keycloak y despliegue CDK. Esta guía es el camino corto y verificado contra el código actual (v4.5.1).
+> Esta guía es el camino corto y verificado contra el código actual (v4.5.3).
 
 ---
 

@@ -5,6 +5,7 @@ Agent factory for Strands integration.
 import logging
 import os
 
+from app.bedrock import is_system_prompt_supported
 from app.repositories.models.conversation import type_model_name
 from app.repositories.models.custom_bot import BotModel, GenerationParamsModel
 from app.repositories.models.custom_bot_guardrails import BedrockGuardrailsModel
@@ -53,6 +54,17 @@ def create_strands_agent(
 
     # Strands does not support list of instructions, so we join them into a single string.
     system_prompt = "\n\n".join(instructions).strip() if instructions else None
+
+    # Some models reject any system message with:
+    # "This model doesn't support system messages."
+    # For those, the instructions travel inside the first user message instead
+    # (see `prepend_instructions_to_first_user_message`), so drop them here.
+    if system_prompt and not is_system_prompt_supported(model_name):
+        logger.info(
+            f"System prompt disabled for model {model_name}: "
+            "it does not support system messages."
+        )
+        system_prompt = None
 
     agent = Agent(
         model=model,

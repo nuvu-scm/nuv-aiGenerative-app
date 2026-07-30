@@ -7,7 +7,11 @@ import logging
 from typing import Callable
 
 from app.agents.tools.agent_tool import ToolRunResult
-from app.bedrock import calculate_price, BedrockGuardrailsModel
+from app.bedrock import (
+    calculate_price,
+    is_system_prompt_supported,
+    BedrockGuardrailsModel,
+)
 from app.repositories.models.conversation import SimpleMessageModel
 from app.repositories.models.custom_bot import (
     BotModel,
@@ -16,6 +20,7 @@ from app.repositories.models.custom_bot import (
 from app.routes.schemas.conversation import ChatInput
 from app.strands_integration.agent import create_strands_agent
 from app.strands_integration.converters import (
+    prepend_instructions_to_first_user_message,
     simple_message_models_to_strands_messages,
     strands_message_to_simple_message_model,
     strands_message_to_message_model,
@@ -101,7 +106,9 @@ def converse_with_strands(
 
     # Set input for agent tracing
     if obs_context.is_active and messages:
-        user_msgs = [m.content[0].body for m in messages if m.role == "user" and m.content]
+        user_msgs = [
+            m.content[0].body for m in messages if m.role == "user" and m.content
+        ]
         if user_msgs:
             obs_context.agent_node.set_input(user_msgs[-1])
 
@@ -149,6 +156,14 @@ def converse_with_strands(
         search_results=search_results,
         prompt_caching_enabled=prompt_caching_enabled,
     )
+
+    # The agent drops the system prompt for models that reject system messages,
+    # so the instructions must ride along with the first user message instead.
+    if instructions and not is_system_prompt_supported(chat_input.message.model):
+        strands_messages = prepend_instructions_to_first_user_message(
+            messages=strands_messages,
+            instructions=instructions,
+        )
 
     def run_agent(agent: Agent) -> tuple[StopReason, Message, EventLoopMetrics]:
         try:

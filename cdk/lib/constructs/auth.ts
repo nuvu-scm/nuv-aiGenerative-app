@@ -135,7 +135,7 @@ export class Auth extends Construct {
               attributeMapping: {
                 // This is an example of mapping the email attribute.
                 // Replace this with the actual idp attribute key.
-                email: ProviderAttribute.other("EMAIL"),
+                email: ProviderAttribute.other("email"),
                 custom: {
                   "custom:kc_roles": ProviderAttribute.other("roles")
                 }

@@ -8,6 +8,7 @@ from .content_converter import (
 )
 
 from .message_converter import (
+    prepend_instructions_to_first_user_message,
     simple_message_models_to_strands_messages,
     strands_message_to_message_model,
     strands_message_to_simple_message_model,
@@ -22,6 +23,7 @@ from .tool_converter import (
 __all__ = [
     "content_model_to_strands_content_blocks",
     "strands_content_block_to_content_model",
+    "prepend_instructions_to_first_user_message",
     "simple_message_models_to_strands_messages",
     "strands_message_to_message_model",
     "strands_message_to_simple_message_model",

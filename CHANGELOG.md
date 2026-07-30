@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.3] - 2026-07-30
+### Fixed
+- **Mistral Models**: Fixed the errors that prevented bots from answering when using Mistral 7B, Mixtral 8x7B or Mistral Large. These models now work with bots that have instructions or knowledge, and Mixtral now uses the settings intended for the Mistral family.
+- **Authentication**: Corrected the email attribute mapping for the external identity provider.
+
+### Changed
+- **Spanish Translation**: Completed the Spanish interface. All texts that were still displayed in English — Discover Bots, chat history and its search, the sharing dialog, model descriptions, knowledge base settings and reasoning — are now translated.
+
+### Added
+- **Documentation**: Added a repository guide for AI coding assistants and consolidated the two local execution manuals into a single up-to-date guide.
+
 ## [4.5.1] - 2026-04-01
 ### Added
 - **Documentation**: Added visual diagrams to help developers understand the API structure.
