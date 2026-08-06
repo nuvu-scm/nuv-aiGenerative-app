@@ -417,11 +417,16 @@ def is_gpt_oss_model(model: type_model_name) -> bool:
 
 
 def is_tooluse_supported(model: type_model_name) -> bool:
-    """Check if the model is supported for tool use"""
+    """Check if the model is supported for tool use
+
+    Ref: https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference-supported-models-features.html
+    """
     return model not in [
         "deepseek-r1",
         "llama3-2-1b-instruct",
         "llama3-2-3b-instruct",
+        "mistral-7b-instruct",
+        "mixtral-8x7b-instruct",
         "",
     ]
 
@@ -439,8 +444,6 @@ def is_tooluse_streaming_supported(model: type_model_name) -> bool:
         return False
 
     return model not in [
-        "mistral-7b-instruct",
-        "mixtral-8x7b-instruct",
         "mistral-large",
         "llama3-3-70b-instruct",
         "llama3-2-11b-instruct",

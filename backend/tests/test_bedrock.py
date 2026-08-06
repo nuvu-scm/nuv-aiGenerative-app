@@ -308,7 +308,6 @@ class TestIsTooluseStreamingSupported(unittest.TestCase):
     def test_models_requiring_non_streaming_for_tooluse(self):
         # These accept toolConfig on Converse but reject it on ConverseStream.
         models: list[type_model_name] = [
-            "mistral-7b-instruct",
             "mistral-large",
             "llama3-3-70b-instruct",
         ]
@@ -318,9 +317,15 @@ class TestIsTooluseStreamingSupported(unittest.TestCase):
                 self.assertFalse(is_tooluse_streaming_supported(model))
 
     def test_models_without_tooluse_are_also_unsupported_for_streaming(self):
-        models: list[type_model_name] = ["deepseek-r1", "llama3-2-1b-instruct"]
+        models: list[type_model_name] = [
+            "deepseek-r1",
+            "llama3-2-1b-instruct",
+            "mistral-7b-instruct",
+            "mixtral-8x7b-instruct",
+        ]
         for model in models:
             with self.subTest(model=model):
+                self.assertFalse(is_tooluse_supported(model))
                 self.assertFalse(is_tooluse_streaming_supported(model))
 
 
