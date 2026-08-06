@@ -17,13 +17,13 @@ class TestSystemPromptSupport(unittest.TestCase):
 
 
 class TestCreateStrandsAgent(unittest.TestCase):
-    def _create_agent(self, model_name):
+    def _create_agent(self, model_name, tools=[]):
         with (
             patch(
                 "app.strands_integration.agent.factory.get_strands_tools",
-                return_value=[],
+                return_value=tools,
             ),
-            patch("app.strands_integration.agent.factory.BedrockModel"),
+            patch("app.strands_integration.agent.factory.BedrockModel") as mock_model,
             patch("app.strands_integration.agent.factory.Agent") as mock_agent,
         ):
             create_strands_agent(
@@ -31,7 +31,9 @@ class TestCreateStrandsAgent(unittest.TestCase):
                 instructions=["Eres Nadia.", "Responde en espanol."],
                 model_name=model_name,
             )
-            return mock_agent.call_args.kwargs
+            return mock_agent.call_args.kwargs | {
+                "model_config": mock_model.call_args.kwargs
+            }
 
     def test_system_prompt_is_dropped_for_models_without_support(self):
         self.assertIsNone(self._create_agent("mistral-7b-instruct")["system_prompt"])
@@ -41,6 +43,18 @@ class TestCreateStrandsAgent(unittest.TestCase):
             self._create_agent("claude-v3.7-sonnet")["system_prompt"],
             "Eres Nadia.\n\nResponde en espanol.",
         )
+
+    def test_streaming_disabled_when_tools_resolved_without_agent(self):
+        # A knowledge-base-only bot attaches the knowledge-search tool even though
+        # no agent is enabled, so the streaming fallback must key off the resolved
+        # tool list. Otherwise mistral-large gets toolConfig on ConverseStream and
+        # emits the tool call as plain text instead of invoking it.
+        kwargs = self._create_agent("mistral-large", tools=[object()])
+        self.assertFalse(kwargs["model_config"]["streaming"])
+
+    def test_streaming_untouched_without_tools(self):
+        kwargs = self._create_agent("mistral-large", tools=[])
+        self.assertNotIn("streaming", kwargs["model_config"])
 
 
 if __name__ == "__main__":

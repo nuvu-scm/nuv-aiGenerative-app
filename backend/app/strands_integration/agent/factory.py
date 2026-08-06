@@ -29,12 +29,12 @@ def create_strands_agent(
     guardrail: BedrockGuardrailsModel | None = None,
     enable_reasoning: bool = False,
     prompt_caching_enabled: bool = False,
-    has_tools: bool = False,
     hooks: list[HookProvider] | None = None,
 ) -> Agent:
-    # Resolve the tools first: `has_tools` from the caller only says the bot has an
-    # agent enabled, while this is the actual list that ends up in `toolConfig`.
-    # Model capability checks must be based on what is really sent to Bedrock.
+    # Resolve the tools first: this is the actual list that ends up in `toolConfig`
+    # (it includes the knowledge-search tool for bots with a knowledge base, even
+    # when no agent is enabled). Model capability checks must be based on what is
+    # really sent to Bedrock.
     tools = get_strands_tools(bot, model_name)
 
     model_config = get_bedrock_model_config(
@@ -44,7 +44,7 @@ def create_strands_agent(
         guardrail=guardrail,
         enable_reasoning=enable_reasoning,
         prompt_caching_enabled=prompt_caching_enabled,
-        has_tools=has_tools and len(tools) > 0,
+        has_tools=len(tools) > 0,
     )
     logger.debug(f"[AGENT_FACTORY] Model config: {model_config}")
     model = BedrockModel(
