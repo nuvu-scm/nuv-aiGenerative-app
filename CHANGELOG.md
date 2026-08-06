@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.4] - 2026-08-06
+### Fixed
+- **Knowledge Base Bots**: Fixed an issue where bots with a knowledge base did not search it when using models without streaming tool support (such as Mistral Large or Llama 3.3). The knowledge search now runs correctly by switching to a non-streaming response for these models.
+- **Mistral 7B / Mixtral 8x7B**: Fixed the "This model doesn't support tool use" error when chatting with bots that have a knowledge base or agent tools. These models now respond normally, although they cannot consult the knowledge base since they do not support tools.
+
 ## [4.5.3] - 2026-07-30
 ### Fixed
 - **Mistral Models**: Fixed the errors that prevented bots from answering when using Mistral 7B, Mixtral 8x7B or Mistral Large. These models now work with bots that have instructions or knowledge, and Mixtral now uses the settings intended for the Mistral family.
