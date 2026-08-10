@@ -6,6 +6,7 @@ import logging
 from typing import Callable
 
 from app.agents.tools.agent_tool import ToolRunResult
+from app.repositories.models.conversation import type_model_name
 from app.stream import OnThinking
 from app.strands_integration.converters.tool_converter import (
     strands_tool_result_to_tool_run_result,
@@ -25,10 +26,12 @@ class ToolResultCapture(HookProvider):
     def __init__(
         self,
         display_citation: bool,
+        model_name: type_model_name | None = None,
         on_thinking: Callable[[OnThinking], None] | None = None,
         on_tool_result: Callable[[ToolRunResult], None] | None = None,
     ):
         self.display_citation = display_citation
+        self.model_name = model_name
         self.on_thinking = on_thinking
         self.on_tool_result = on_tool_result
 
@@ -68,5 +71,6 @@ class ToolResultCapture(HookProvider):
         enhanced_result = tool_run_result_to_strands_tool_result(
             result=tool_result,
             display_citation=self.display_citation,
+            model_name=self.model_name,
         )
         event.result = enhanced_result

@@ -5,6 +5,7 @@ Tool result conversion utilities for Strands integration.
 import logging
 
 from app.agents.tools.agent_tool import ToolRunResult
+from app.bedrock import is_nova_model
 from app.repositories.models.conversation import (
     DocumentToolResultModel,
     ImageToolResultModel,
@@ -12,6 +13,7 @@ from app.repositories.models.conversation import (
     RelatedDocumentModel,
     TextToolResultModel,
     ToolResultModel,
+    type_model_name,
 )
 from strands.types.tools import ToolResult, ToolResultContent
 
@@ -125,23 +127,62 @@ def strands_tool_result_content_to_tool_result_model(
     raise ValueError(f"Unknown tool result content type")
 
 
+def _merge_tool_result_contents(
+    contents: list[ToolResultContent],
+) -> list[ToolResultContent]:
+    """Merge multiple json/text content blocks into a single json block.
+
+    Amazon Nova models degrade with multiple content blocks in a toolResult:
+    they return an empty message, hallucinate a fake tool transcript, or fail
+    with "Model produced invalid sequence as part of ToolUse". A single block
+    with the same data produces a normal answer. Blocks other than json/text
+    (image, document) cannot be merged, so those lists are left untouched.
+    """
+    if len(contents) <= 1:
+        return contents
+
+    if not all("json" in content or "text" in content for content in contents):
+        return contents
+
+    return [
+        {
+            "json": {
+                "results": [
+                    (
+                        content["json"]
+                        if "json" in content
+                        else {"content": content["text"]}
+                    )
+                    for content in contents
+                ],
+            },
+        }
+    ]
+
+
 def tool_run_result_to_strands_tool_result(
     result: ToolRunResult,
     display_citation: bool,
+    model_name: type_model_name | None = None,
 ) -> ToolResult:
     """Convert our ToolRunResult back to Strands ToolResult format with source_id included."""
+
+    contents = [
+        tool_result_model_to_strands_tool_result_content(
+            related_document.to_tool_result_model(
+                display_citation=display_citation,
+            )
+        )
+        for related_document in result["related_documents"]
+    ]
+
+    if model_name is not None and is_nova_model(model_name):
+        contents = _merge_tool_result_contents(contents)
 
     return {
         "toolUseId": result["tool_use_id"],
         "status": result["status"],
-        "content": [
-            tool_result_model_to_strands_tool_result_content(
-                related_document.to_tool_result_model(
-                    display_citation=display_citation,
-                )
-            )
-            for related_document in result["related_documents"]
-        ],
+        "content": contents,
     }
 
 

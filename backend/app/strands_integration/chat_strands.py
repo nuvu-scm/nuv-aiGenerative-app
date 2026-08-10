@@ -89,6 +89,7 @@ def converse_with_strands(
 
     tool_capture = ToolResultCapture(
         display_citation=display_citation,
+        model_name=chat_input.message.model,
         on_thinking=on_thinking,
         on_tool_result=on_tool_result,
     )
