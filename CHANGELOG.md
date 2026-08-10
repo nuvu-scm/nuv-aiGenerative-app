@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.5] - 2026-08-10
+### Fixed
+- **Amazon Nova Models**: Fixed an issue where bots with a knowledge base returned an empty answer (or an incoherent one) when using Amazon Nova models (Pro, Lite, Micro). Nova models could not process search results split into multiple content blocks, so the results are now delivered as a single block for them. Answers now include the retrieved information with proper citations.
+
 ## [4.5.4] - 2026-08-06
 ### Fixed
 - **Knowledge Base Bots**: Fixed an issue where bots with a knowledge base did not search it when using models without streaming tool support (such as Mistral Large or Llama 3.3). The knowledge search now runs correctly by switching to a non-streaming response for these models.
